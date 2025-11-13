@@ -1,4 +1,4 @@
-# 法律问题智能分类系统
+# ToTR 演示。
 
 > 基于本地大模型（Ollama）的法律领域客户问题自动分类工具  
 > Inspired by **ToTR V2: Vector-Aided Classification for Hierarchical Retrieval**
