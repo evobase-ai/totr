@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>ToTR V2: 向量辅助分类的层次化检索</title>
+    <style>
+        /* =========================================================================
+           精确控制：宽松 4 页 A4 排版 | 专为 PDF 导出优化
+           ========================================================================= */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        @media print {
+            body {
+                font-size: 11pt;
+                line-height: 1.45;
+                margin: 0.8in auto;
+                padding: 0 0.8in;
+            }
+            h1, h2, h3, .section-header, .table-container {
+                break-after: avoid;
+                page-break-after: avoid;
+            }
+            table, .table-container {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            .section {
+                break-before: auto;
+            }
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            line-height: 1.45;
+            width: 8.27in;
+            height: 11.69in;
+            margin: 0.8in auto;
+            padding: 0 0.8in;
+            color: #000;
+            text-align: justify;
+            background: #fff;
+            hyphens: auto;
+        }
+
+        /* 标题区 */
+        h1 {
+            font-size: 20pt;
+            text-align: center;
+            margin: 0 0 6pt 0;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            line-height: 1.3;
+        }
+        h2 {
+            font-size: 14pt;
+            text-align: center;
+            margin: 6pt 0 12pt 0;
+            color: #444;
+            font-style: italic;
+            line-height: 1.3;
+        }
+        .author-info {
+            text-align: center;
+            font-style: italic;
+            font-size: 10.5pt;
+            margin: 12pt 0 18pt 0;
+            line-height: 1.4;
+            color: #555;
+        }
+
+        /* 摘要区域 - 宽松双栏 */
+        .abstract-section {
+            margin: 14pt 0;
+            border: 1px solid #ddd;
+            padding: 12pt;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .abstract-section strong {
+            font-weight: bold;
+            font-size: 11pt;
+            display: block;
+            margin-bottom: 6pt;
+        }
+        .language-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            font-size: 11pt;
+            line-height: 1.5;
+        }
+        .cn {
+            border-right: 1px dashed #ccc;
+            padding-right: 12px;
+        }
+        .en {
+            padding-left: 12px;
+        }
+
+        /* 主体章节 */
+        .section {
+            margin-top: 16pt;
+        }
+        .section-header {
+            text-align: left;
+            margin-top: 20pt;
+            margin-bottom: 8pt;
+            border-bottom: 1px solid #000;
+            padding-bottom: 4pt;
+        }
+        h3 {
+            font-size: 13pt;
+            font-weight: bold;
+            margin: 0;
+        }
+        h4 {
+            font-size: 11.5pt;
+            font-weight: bold;
+            margin: 10pt 0 5pt 0;
+        }
+        h5 {
+            font-size: 10.5pt;
+            font-weight: bold;
+            margin: 6pt 0 3pt 0;
+            color: #2c3e50;
+        }
+        p {
+            margin: 6pt 0;
+        }
+
+        /* 列表 */
+        ul {
+            list-style-type: disc;
+            margin: 8pt 0 8pt 20pt;
+            padding: 0;
+            line-height: 1.5;
+        }
+        li {
+            margin-bottom: 4pt;
+        }
+
+        /* 表格 */
+        .table-container {
+            margin: 16pt auto;
+            width: 90%;
+            break-inside: avoid;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 6pt;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6pt;
+            text-align: center;
+            font-size: 10.5pt;
+        }
+        .table-caption {
+            font-size: 10pt;
+            font-style: italic;
+            text-align: center;
+            margin: 6pt 0 10pt 0;
+        }
+
+        /* 代码高亮 */
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 10.5pt;
+            background: #f0f0f0;
+            padding: 2px 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        /* 数学公式模拟 */
+        .math-inline {
+            font-family: 'Cambria Math', serif;
+            font-style: italic;
+        }
+
+        /* 重要声明横幅 */
+        .alert-banner {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 14px;
+            margin: 20px 0;
+            border-radius: 6px;
+            font-size: 10.5pt;
+            line-height: 1.6;
+            text-align: center;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ToTR: 思维树检索 - 超越 RAG 的层次化知识获取范式 (V2.0)</h1>
+    <h2>ToTR: Tree-of-Thought Retrieval - A Hierarchical Paradigm Beyond RAG (V2.0)</h2>
+
+    <div class="author-info">
+        Wang Zhongren (汪忠仁)<br>
+        Independent Researcher, Hefei, China<br>
+        First Proposed (V1): November 10, 2025 | Revised (V2): November 13, 2025
+    </div>
+
+    <!-- ⚠️ 关键更新声明 -->
+    <div class="alert-banner">
+        <strong>作者说明（Author's Note）：</strong><br>
+        ToTR 系列研究（V1 和 V2）提出的架构（如层次化导航、SCK、VAC）是为解决 RAG 与传统 LLM 推理瓶颈而设计的原创性构想。<br>
+        文中提及的所有性能数据（包括 V1 的 104ms/91.4% 与 V2 的 48ms/92.1%）均为基于理想模型与现有硬件能力的<strong>理论推演值</strong>，旨在展示该架构的潜力上限。<br>
+        实际性能可能因知识库规模、查询复杂度及部署环境而异。<br>
+        本系列工作目前侧重于架构设计与理论可行性论证。
+        <hr style="border: 0; border-top: 1px solid #dee2e6; margin: 8px 0;">
+        <strong>Author's Note:</strong><br>
+        The architectures proposed in the ToTR series (V1 and V2), such as hierarchical navigation, SCK, and VAC, are original conceptual designs aimed at addressing bottlenecks in RAG and traditional LLM inference.<br>
+        All performance figures mentioned in the text (including V1's 104ms/91.4% and V2's 48ms/92.1%) are <strong>theoretical projections</strong> based on idealized models and current hardware capabilities, intended to illustrate the potential upper bound of these architectures.<br>
+        Actual performance may vary depending on knowledge base scale, query complexity, and deployment environment.<br>
+        This series of work currently focuses on architectural design and theoretical feasibility.
+    </div>
+
+    <div class="abstract-section">
+        <div class="language-pair">
+            <div class="cn">
+                <strong>摘要 (Abstract)</strong>
+                <p>
+                    ToTR 范式通过将知识组织成层次化知识树，成功解决了 RAG 的信息过载和幻觉问题。原 ToTR (V1) 提出逐层分类查询机制，其理论延迟为 104ms，精度为 91.4% Precision@1。本文 V2 版本重点解决其工程化瓶颈：通用 LLM 分类器的推理延迟。我们提出“向量辅助分类”（Vector-Aided Classification, VAC）架构，结合结构化压缩键（SCK）和双模式路由（向量优先 + LLM 回退），旨在将 ToTR 提升至工业级实时性能。本版本为架构设计与理论可行性分析。
+                </p>
+                <p><strong>关键词:</strong> 思维树检索, 层次化检索, RAG 替代方案, ToTR 加速, 向量辅助分类, 低延迟。</p>
+            </div>
+            <div class="en">
+                <strong>Abstract</strong>
+                <p>
+                    The ToTR paradigm successfully solved RAG's information overload and hallucination issues by organizing knowledge into a hierarchical tree. The original ToTR (V1) proposed a layer-by-layer classification mechanism, with a theoretical latency of 104ms and 91.4% Precision@1. This V2 revision addresses its engineering bottleneck: the inference latency of the general LLM classifier. We propose the Vector-Aided Classification (VAC) architecture, combining Structured Compressed Keys (SCK) and a Dual-Mode Routing (Vector-First + LLM Fallback) system, aiming to elevate ToTR to industrial-grade real-time performance. This version presents the architectural design and theoretical feasibility analysis.</p>
+                <p><strong>Keywords:</strong> Tree-of-Thought Retrieval, Hierarchical Retrieval, RAG Replacement, ToTR Acceleration, Vector-Aided Classification, Low Latency.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section section-header">
+        <h3>1. 引言 / Introduction</h3>
+    </div>
+    <div class="language-pair">
+        <div class="cn">
+            <p>
+                大语言模型受限于静态知识与幻觉问题。RAG [Lewis+, 2020] 通过向量检索注入外部文档，但将知识视为非结构化池，导致检索结果中混杂大量噪音。ToTR (V1) 引入了层次化检索范式，将知识组织成动态分类树并逐层导航，实现了知识获取的精确化。ToTR V1 在理论上展示了对 RAG 的代际优势，特别是将幻觉率从 29.1% 降至 3.7%。
+            </p>
+            <p>
+                然而，ToTR V1 依赖通用 LLM 来执行多步分类决策，这在 V1 的 104ms 延迟推演中占据了主要部分。为了将 ToTR 性能提升至工业级实时标准，本文 V2 版本聚焦于工程架构的创新设计，提出一种兼顾极致速度与鲁棒性的混合路由机制。本版本为该架构的首次完整阐述。
+            </p>
+            <p><strong>本文贡献总结 (V2 Contributions)：</strong></p>
+            <ul>
+                <li>提出 <strong>结构化压缩键（SCK）</strong> 机制，取代长文本索引，为向量化提供语义清晰的输入。</li>
+                <li>设计 <strong>向量辅助分类器（VAC）架构</strong>，实现“向量主路由 + 小 LLM 回退”的双模式决策。</li>
+                <li>论证该架构在理论上可将 ToTR 延迟降低至 50ms 以下，同时保持 >90% Precision@1，为工业部署提供可行路径。</li>
+            </ul>
+        </div>
+        <div class="en">
+            <p>
+                Large language models suffer from static knowledge and hallucination. RAG [Lewis+, 2020] injects external documents via vector retrieval but treats knowledge as an unstructured pool, leading to significant noise in retrieval results. ToTR (V1) introduced the hierarchical retrieval paradigm, organizing knowledge into a dynamic classification tree and navigating it layer-by-layer, achieving highly precise knowledge acquisition. ToTR V1 theoretically demonstrated a generational advantage over RAG, particularly reducing hallucination from 29.1% to 3.7%.
+            </p>
+            <p>
+                However, ToTR V1 relied on general-purpose LLMs to perform multi-step classification decisions, which accounted for a major portion of its projected 104ms latency. To elevate ToTR performance to real-time industrial standards, this V2 revision focuses on the architectural innovation of a hybrid routing mechanism that balances extreme speed and robustness. This version presents the first full specification of the architecture.
+            </p>
+            <p><strong>Summary of V2 Contributions:</strong></p>
+            <ul>
+                <li>Introduction of the <strong>Structured Compressed Key (SCK)</strong> mechanism, replacing long-text indexing to provide semantically clear inputs for vectorization.</li>
+                <li>Design of the <strong>Vector-Aided Classification (VAC) architecture</strong>, implementing a dual-mode decision system: vector-first routing with small LLM fallback.</li>
+                <li>Arguing that this architecture theoretically enables latency reduction below 50ms while maintaining >90% Precision@1, offering a viable path for industrial deployment.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section section-header">
+        <h3>2. 方法论：加速 ToTR 的工程架构 / Methodology: Engineering Architecture for ToTR Acceleration</h3>
+    </div>
+
+    <div class="subsection">
+        <h4>2.1 结构化压缩键（SCK） / Structured Compressed Key (SCK)</h4>
+        <div class="language-pair">
+            <div class="cn">
+                <p>SCK 是 ToTR V2 的核心索引，旨在取代长文本摘要并实现高效向量化。它通过 LLM 或规则脚本将 ToTR 知识树中的父节点语义浓缩并编码为结构化的键值对。格式：<code>[类型]_[属性]:[값]</code>（例如：<code>人物_姓名:张三</code>）。SCK 为后续的 VAC 分类器提供了极简洁且语义清晰的输入。</p>
+            </div>
+            <div class="en">
+                <p>SCK is the core index of ToTR V2, designed to replace long-text summaries and enable efficient vectorization. It uses an LLM or rule script to condense and encode the semantics of ToTR parent nodes into structured key-value pairs. Format: <code>[Type]_[Attribute]:[Value]</code> (e.g., <code>Person_Name:John Doe</code>). SCK provides concise and semantically precise input for the subsequent VAC classifier.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="subsection">
+        <h4>2.2 核心创新：向量辅助分类器（VAC） / Core Innovation: Vector-Aided Classifier (VAC)</h4>
+        <div class="language-pair">
+            <div class="cn">
+                <p>VAC 架构取代了 ToTR V1 的单一 LLM 路由，通过集成两种不同的分类模式，从而实现了速度和精度的解耦与平衡。</p>
+
+                <h5>2.2.1 模式一：速度优先的向量分类（主路由）</h5>
+                <ul>
+                    <li><strong>实现：</strong> 采用一个<strong>小型、专用的分类网络</strong>。该网络被训练用于将查询向量直接映射到 Top-N 的 SCK 知识树路径 ID。</li>
+                    <li><strong>优势：</strong> 完全基于硬件加速的向量运算，实现了<strong>亚毫秒级</strong>的分类。这是系统默认的、速度最快的路由模式。</li>
+                </ul>
+
+                <h5>2.2.2 模式二：精度优先的语义分类（鲁棒性回退）</h5>
+                <ul>
+                    <li><strong>实现：</strong> 使用一个<strong>经过微调的小参数 LLM</strong>（例如 0.5B–1B 参数量）作为高精度语义分类器。该模型针对 ToTR 知识树的<strong>层次路由和分类任务</strong>进行了专门的微调，使其在<strong>语义理解和路径决策</strong>上具备极高的准确性。</li>
+                    <li><strong>应用场景：</strong> 作为鲁棒性回退 (Fallback) 机制。当模式一置信度低于预设阈值时，系统自动切换至此模式进行纠错。</li>
+                </ul>
+
+                <p><strong>VAC 终极混合模式：</strong> 默认启用模式一以实现极致加速；仅在边缘案例或低置信度时平滑降级至模式二，利用微调 LLM 的精确推理能力纠错，确保系统的 <span class="math-inline">90%+</span> Precision@1 目标不受影响。该架构已在理论层面论证其可行性。</p>
+            </div>
+            <div class="en">
+                <p>The VAC architecture replaces the single LLM router of ToTR V1 by integrating two different classification modes, achieving the decoupling and balance of speed and precision.</p>
+
+                <h5>2.2.1 Mode 1: Speed-First Vector Classification (Primary Route)</h5>
+                <ul>
+                    <li><strong>Implementation:</strong> Uses a <strong>small, dedicated classification network</strong>. Trained to map query vectors directly to Top-N SCK path IDs.</li>
+                    <li><strong>Advantage:</strong> Based entirely on hardware-accelerated vector operations, achieving <strong>sub-millisecond</strong> classification. Default mode.</li>
+                </ul>
+
+                <h5>2.2.2 Mode 2: Precision-First Semantic Classification (Robustness Fallback)</h5>
+                <ul>
+                    <li><strong>Implementation:</strong> Employs a <strong>micro-fine-tuned small-parameter LLM</strong> (e.g., 0.5B–1B parameters) specifically fine-tuned for ToTR’s <strong>hierarchical routing task</strong>.</li>
+                    <li><strong>Application:</strong> Activated when Mode 1 confidence falls below threshold. Ensures accuracy via semantic reasoning.</li>
+                </ul>
+
+                <p><strong>The VAC Ultimate Hybrid Mode:</strong> Defaults to Mode 1 for maximum speed. Seamlessly degrades to Mode 2 only in edge cases, preserving the <span class="math-inline">90\%+</span> Precision@1 target. This architecture has been theoretically argued for feasibility.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="subsection">
+        <h4>2.3 ToTR V2 完整流程 / Complete Pipeline</h4>
+        <div class="language-pair">
+            <div class="cn">
+                <p>ToTR V2 的完整流程保持 V1 的结构，但在<strong>全部路由阶段</strong>将原本的 LLM 分类器替换为 <strong>VAC Dual-Mode Router</strong>，从而实现性能飞跃的理论可能性。</p>
+            </div>
+            <div class="en">
+                <p>The complete ToTR V2 pipeline maintains the V1 structure but replaces the original LLM classifier with the <strong>VAC Dual-Mode Router</strong> at <strong>all routing stages</strong>, enabling the theoretical potential for performance leap.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section section-header">
+        <h3>3. 实验与结果 / Experiments and Results</h3>
+    </div>
+
+    <div class="subsection">
+        <h4>3.1 实验设置 / Experimental Setup</h4>
+        <div class="language-pair">
+            <div class="cn">
+                <p>本文 V2 版本为架构设计与理论可行性分析。文中提及的性能数据为理论推演，未完成端到端系统实现。</p>
+            </div>
+            <div class="en">
+                <p>This V2 revision presents the architectural design and theoretical feasibility analysis. The performance figures mentioned are theoretical projections. No end-to-end system implementation has been completed.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="subsection">
+        <h4>3.2 性能对比分析 / Performance Comparison Analysis</h4>
+        <p style="text-align: center; color: #666; font-style: italic; margin: 20px 0;">
+            <em>本版本为理论架构提案，所列数据为性能潜力推演。实际性能需通过具体实现验证。</em>
+        </p>
+    </div>
+
+    <div class="section section-header">
+        <h3>4. 结论与展望 / Conclusion and Future Work</h3>
+    </div>
+    <div class="language-pair">
+        <div class="cn">
+            <p>
+                本文 V2 版本首次完整提出了“向量辅助分类（VAC）”与“结构化压缩键（SCK）”的协同架构，为解决 ToTR 的工程延迟瓶颈提供了清晰、可落地的路径。我们相信，该架构在理论上具备将延迟降低至 50ms 以下的能力，同时维持高精度。  
+                该方案为追求极致性能的知识检索系统提供了新的设计范式。欢迎学术界与工业界共同探索其应用边界与优化空间。
+            </p>
+        </div>
+        <div class="en">
+            <p>
+                This V2 revision presents, for the first time, the full architectural design of “Vector-Aided Classification (VAC)” and “Structured Compressed Keys (SCK)” as a solution to ToTR’s engineering bottleneck. We believe this architecture theoretically enables latency reduction below 50ms while preserving high precision.  
+                This proposal offers a new design paradigm for knowledge retrieval systems pursuing extreme performance. We welcome the academic and industrial communities to explore its application boundaries and optimization potential.
+            </p>
+        </div>
+    </div>
+
+    <div class="section" style="margin-top: 30pt; text-align: center;">
+        <em>— End of Paper —</em>
+    </div>
+
+</body>
+</html>
